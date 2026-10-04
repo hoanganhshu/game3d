@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa5380543591d3a499ddfdf787518d1b, type: 3}
+  m_Name: GameAssets
+  m_EditorClassIdentifier: Assembly-CSharp::FPSGame.GameAssets
+  playerPrefab: {fileID: 3409315031661503544, guid: 0253bfd1f63049541ac8612314b6405c, type: 3}
+  enemyPrefab: {fileID: 4225902662307353151, guid: ac81b1053e99b7d4b80a77c4cb7ebc41, type: 3}
+  bossPrefab: {fileID: 2571852626545778740, guid: aa2bcf24b9cbb9245b685b5bc7b62299, type: 3}
+  impactEffectPrefab: {fileID: 7099001153159345163, guid: 5fff00640f0c85e468a78a64195e1d2e, type: 3}
+  bloodEffectPrefab: {fileID: 5151319699210868393, guid: 8d14e51a379a6ab45a2dacdd569d67b7, type: 3}
+  healthPickupPrefab: {fileID: 8779266253099711329, guid: e9390f6df1312a749a50e5b21683420c, type: 3}
+  ammoPickupPrefab: {fileID: 4005846071363027230, guid: 0fd657de382129748add9da863e581b1, type: 3}
+  floorMaterial: {fileID: 2100000, guid: efa8d69cf7938ce4ea761d165b85000f, type: 2}
+  wallMaterial: {fileID: 2100000, guid: 7824bb8cec6f4a44989be36490c1bddc, type: 2}
+  obstacleMaterial: {fileID: 2100000, guid: 5e4169945331c0d49905a866c0cbfa2d, type: 2}
