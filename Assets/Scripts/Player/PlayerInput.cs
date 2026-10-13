@@ -22,6 +22,8 @@ namespace FPSGame
         public bool FirePressed { get; private set; }
         public bool ReloadPressed { get; private set; }
         public bool JumpPressed { get; private set; }
+        public bool CrouchHeld { get; private set; }
+        public bool RunHeld { get; private set; }
         public bool SwitchPressed { get; private set; }
         public int SelectWeapon { get; private set; } = -1;
 
@@ -45,7 +47,13 @@ namespace FPSGame
             }
 
             float sensitivity = SaveManager.Instance != null ? SaveManager.Instance.Sensitivity : 1f;
-            if (InputMode.TouchMode) ReadTouch(sensitivity);
+            if (InputMode.TouchMode)
+            {
+                ReadTouch(sensitivity);
+                // Touch controls and the keyboard are intentionally active together. This is
+                // useful for Editor testing, desktop touch screens and hybrid devices.
+                MergeKeyboard();
+            }
             else ReadDesktop(sensitivity);
         }
 
@@ -57,6 +65,8 @@ namespace FPSGame
             FirePressed = false;
             ReloadPressed = false;
             JumpPressed = false;
+            CrouchHeld = false;
+            RunHeld = false;
             SwitchPressed = false;
             SelectWeapon = -1;
         }
@@ -80,8 +90,9 @@ namespace FPSGame
                     lookPixels += fire.ConsumeDrag();
                 }
 
-                ReloadPressed = controls.ReloadButton != null && controls.ReloadButton.ConsumePress();
+                CrouchHeld = controls.CrouchButton != null && controls.CrouchButton.IsHeld;
                 JumpPressed = controls.JumpButton != null && controls.JumpButton.ConsumePress();
+                ReloadPressed = controls.ReloadButton != null && controls.ReloadButton.ConsumePress();
                 SwitchPressed = controls.SwitchButton != null && controls.SwitchButton.ConsumePress();
             }
 
@@ -148,6 +159,29 @@ namespace FPSGame
             Look = lookPixels * pixelsToDegrees;
         }
 
+        private void MergeKeyboard()
+        {
+            float x = 0f;
+            float y = 0f;
+            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) x -= 1f;
+            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) x += 1f;
+            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) y += 1f;
+            if (Input.GetKey(KeyCode.Z) || Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) y -= 1f;
+            Vector2 keyboardMove = new Vector2(x, y);
+            if (keyboardMove.sqrMagnitude > 1f) keyboardMove.Normalize();
+            if (keyboardMove.sqrMagnitude > 0f) Move = keyboardMove;
+
+            ReloadPressed |= Input.GetKeyDown(KeyCode.R);
+            FireHeld |= Input.GetKey(KeyCode.F);
+            FirePressed |= Input.GetKeyDown(KeyCode.F);
+            JumpPressed |= Input.GetKeyDown(KeyCode.Space);
+            CrouchHeld |= Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.LeftControl);
+            RunHeld |= Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            SwitchPressed |= Input.GetKeyDown(KeyCode.Q) || Mathf.Abs(Input.mouseScrollDelta.y) > 0.01f;
+            if (Input.GetKeyDown(KeyCode.Alpha1)) SelectWeapon = 0;
+            else if (Input.GetKeyDown(KeyCode.Alpha2)) SelectWeapon = 1;
+        }
+
         /// <summary>
         /// Raycasts the UI directly. IsPointerOverGameObject can miss a touch that began this
         /// frame because the EventSystem may not have processed it yet.
@@ -178,7 +212,7 @@ namespace FPSGame
             if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) x -= 1f;
             if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) x += 1f;
             if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) y += 1f;
-            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) y -= 1f;
+            if (Input.GetKey(KeyCode.Z) || Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) y -= 1f;
 
             Vector2 move = new Vector2(x, y);
             if (move.sqrMagnitude > 1f) move.Normalize();
@@ -192,8 +226,15 @@ namespace FPSGame
                 FirePressed = Input.GetMouseButtonDown(0);
             }
 
+            // Keyboard fire remains available when the cursor is not locked, which makes
+            // the desktop controls usable alongside the visible touch HUD.
+            FireHeld |= Input.GetKey(KeyCode.F);
+            FirePressed |= Input.GetKeyDown(KeyCode.F);
+
             ReloadPressed = Input.GetKeyDown(KeyCode.R);
+            CrouchHeld = Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.LeftControl);
             JumpPressed = Input.GetKeyDown(KeyCode.Space);
+            RunHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
             SwitchPressed = Input.GetKeyDown(KeyCode.Q) || Mathf.Abs(Input.mouseScrollDelta.y) > 0.01f;
             if (Input.GetKeyDown(KeyCode.Alpha1)) SelectWeapon = 0;
             else if (Input.GetKeyDown(KeyCode.Alpha2)) SelectWeapon = 1;

@@ -35,11 +35,13 @@ namespace FPSGame
         [SerializeField] private float fieldOfView = 140f;
         [SerializeField] private float loseSightTime = 5f;
         [SerializeField] private float fireInterval = 1.2f;
-        [SerializeField] private float damage = 7f;
+        [SerializeField] private float damage = 3.5f;
         [SerializeField, Range(0f, 1f)] private float accuracy = 0.55f;
         [SerializeField] private float patrolRadius = 8f;
         [SerializeField] private int scoreValue = 100;
         [SerializeField, Range(0f, 1f)] private float dropChance = 0.5f;
+        [SerializeField] private float growlRange = 16f;
+        [SerializeField] private Vector2 growlInterval = new Vector2(4.5f, 8f);
 
         [Header("References")]
         [SerializeField] private Transform eye;
@@ -47,13 +49,17 @@ namespace FPSGame
         [SerializeField] private GameObject muzzleFlash;
         [SerializeField] private EnemyHealthBar healthBar;
         [SerializeField] private Renderer bodyRenderer;
+        [SerializeField] private EnemyAnimatorBridge animationBridge;
 
         private static int colorPropertyId = -1;
+        private static Material tracerMaterial;
 
         private NavMeshAgent agent;
         private Collider ownCollider;
         private NavMeshPath path;
         private MaterialPropertyBlock propertyBlock;
+        private LineRenderer shotTracer;
+        private GameObject runtimeHeadFlash;
         private Transform player;
         private PlayerHealth playerHealth;
 
@@ -70,6 +76,10 @@ namespace FPSGame
         private float deathTime;
         private Quaternion deathStartRotation;
         private Quaternion deathEndRotation;
+        private float nextGrowlTime;
+        private Vector3 lastSafePosition;
+        private float avoidUntil;
+        private bool combatRangesExpanded;
 
         public EnemyState State { get; private set; } = EnemyState.Patrol;
         public bool IsBoss => isBoss;
@@ -86,6 +96,7 @@ namespace FPSGame
             ownCollider = GetComponent<Collider>();
             path = new NavMeshPath();
             propertyBlock = new MaterialPropertyBlock();
+            if (animationBridge == null) animationBridge = GetComponentInChildren<EnemyAnimatorBridge>();
             health = maxHealth;
             homePosition = transform.position;
             if (muzzleFlash != null) muzzleFlash.SetActive(false);
@@ -97,9 +108,21 @@ namespace FPSGame
             playerHealth = targetHealth;
             homePosition = transform.position;
             agent.speed = patrolSpeed;
+            if (!combatRangesExpanded)
+            {
+                detectionRange = Mathf.Max(detectionRange, isBoss ? 42f : 32f) * 3f;
+                // If the player is visible anywhere inside the detection radius, the enemy
+                // is also allowed to fire. Line of sight in Sense() still prevents wall shots.
+                attackRange = detectionRange;
+                combatRangesExpanded = true;
+            }
+            fieldOfView = Mathf.Max(fieldOfView, 220f);
+            lastSafePosition = transform.position;
             nextSenseTime = Time.time + Random.Range(0f, SenseInterval);
             nextFireTime = Time.time + Random.Range(0.5f, fireInterval);
+            nextGrowlTime = Time.time + Random.Range(1.5f, 4f);
             if (healthBar != null) healthBar.SetValue(1f);
+            if (animationBridge != null) animationBridge.ResetState();
         }
 
         private void Update()
@@ -112,7 +135,20 @@ namespace FPSGame
 
             UpdateFlashes();
 
+            if (animationBridge != null)
+            {
+                float motionSpeed = AgentReady ? agent.velocity.magnitude : 0f;
+                animationBridge.UpdateMotion(motionSpeed, State);
+            }
+
             if (player == null || playerHealth == null || !AgentReady) return;
+
+            float playerDistanceSqr = (player.position - transform.position).sqrMagnitude;
+            if (playerDistanceSqr <= growlRange * growlRange && Time.time >= nextGrowlTime)
+            {
+                nextGrowlTime = Time.time + Random.Range(growlInterval.x, growlInterval.y);
+                AudioManager.PlaySoundAt(SoundType.EnemyGrowl, transform.position + Vector3.up, isBoss ? 0.9f : 0.58f);
+            }
 
             if (!GameManager.IsPlaying)
             {
@@ -152,8 +188,9 @@ namespace FPSGame
             float range = State == EnemyState.Patrol ? detectionRange : detectionRange * 1.6f;
             if (sqrDistance > range * range) return;
 
-            // While patrolling, only see what is in front, unless the player is very close.
-            if (State == EnemyState.Patrol && sqrDistance > 16f)
+            // Inside weapon range the enemy must react regardless of its initial facing.
+            // The old four-metre threshold made a nearby enemy appear completely passive.
+            if (State == EnemyState.Patrol && sqrDistance > attackRange * attackRange)
             {
                 Vector3 flat = toPlayer;
                 flat.y = 0f;
@@ -169,10 +206,28 @@ namespace FPSGame
             {
                 canSeePlayer = true;
             }
-            else if (Physics.Raycast(eyePosition, direction / distance, out RaycastHit hit, distance + 0.5f,
-                         Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            else
             {
-                canSeePlayer = hit.transform == player;
+                RaycastHit[] hits = Physics.RaycastAll(eyePosition, direction / distance, distance + 0.5f,
+                    Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+                bool foundBlocker = false;
+                foreach (RaycastHit hit in hits)
+                {
+                    if (hit.transform == transform || hit.transform.IsChildOf(transform)) continue;
+                    if (hit.transform == player || hit.transform.IsChildOf(player))
+                    {
+                        canSeePlayer = true;
+                        break;
+                    }
+
+                    foundBlocker = true;
+                    break;
+                }
+
+                // Some player controllers do not expose a raycast collider at chest height.
+                // An empty ray therefore means a clear, unobstructed segment to the target.
+                if (!foundBlocker && !canSeePlayer) canSeePlayer = true;
             }
 
             if (canSeePlayer) lastSeenTime = Time.time;
@@ -208,11 +263,12 @@ namespace FPSGame
 
         private void PickPatrolPoint()
         {
-            for (int attempt = 0; attempt < 5; attempt++)
+            for (int attempt = 0; attempt < 16; attempt++)
             {
                 Vector2 offset = Random.insideUnitCircle * patrolRadius;
                 Vector3 candidate = homePosition + new Vector3(offset.x, 0f, offset.y);
                 if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 2f, NavMesh.AllAreas) &&
+                    HasClearPhysicalRoute(hit.position) &&
                     agent.CalculatePath(hit.position, path) &&
                     path.status == NavMeshPathStatus.PathComplete)
                 {
@@ -220,6 +276,10 @@ namespace FPSGame
                     return;
                 }
             }
+
+            // No clear candidate from this position: turn away immediately and retry shortly.
+            transform.Rotate(0f, Random.Range(100f, 260f), 0f);
+            waitUntil = Time.time + 0.18f;
         }
 
         private void EnterChase()
@@ -251,7 +311,7 @@ namespace FPSGame
                 return;
             }
 
-            if (Time.time >= nextRepathTime)
+            if (Time.time >= nextRepathTime && Time.time >= avoidUntil)
             {
                 nextRepathTime = Time.time + RepathInterval;
                 agent.SetDestination(player.position);
@@ -293,19 +353,67 @@ namespace FPSGame
 
         private void Shoot(float distance)
         {
+            if (animationBridge != null) animationBridge.PlayAttack();
             if (muzzleFlash != null)
             {
                 muzzleFlash.SetActive(true);
                 flashOffTime = Time.time + 0.06f;
             }
 
-            Vector3 soundPosition = gunPoint != null ? gunPoint.position : transform.position;
+            // Imported Meshy weapon sockets are inconsistent between models. Start the shot
+            // at head/eye height so the tracer visibly comes from the monster toward the player.
+            Vector3 soundPosition = eye != null
+                ? eye.position + transform.forward * 0.28f
+                : transform.position + Vector3.up * 1.45f + transform.forward * 0.28f;
+            ShowHeadMuzzleFlash(soundPosition);
             AudioManager.PlaySoundAt(SoundType.EnemyShot, soundPosition, 0.8f);
+            Vector3 targetPoint = player.position + Vector3.up * 0.85f;
+            ShowShotTracer(soundPosition, targetPoint);
 
-            float hitChance = accuracy * Mathf.Lerp(1f, 0.5f, distance / Mathf.Max(1f, attackRange));
+            float distance01 = Mathf.Clamp01(distance / Mathf.Max(1f, attackRange));
+            float hitChance = Mathf.Lerp(0.9f, accuracy * 0.55f, distance01);
             if (Random.value <= hitChance)
             {
                 playerHealth.TakeDamage(damage, player.position, -transform.forward);
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (!AgentReady || State == EnemyState.Dead) return;
+
+            float radius = Mathf.Max(0.18f, agent.radius * 0.72f);
+            Vector3 bottom = transform.position + Vector3.up * (radius + 0.18f);
+            Vector3 top = transform.position + Vector3.up * Mathf.Max(radius + 0.2f, agent.height - radius);
+            Collider[] overlaps = Physics.OverlapCapsule(bottom, top, radius,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+
+            bool blocked = false;
+            foreach (Collider overlap in overlaps)
+            {
+                if (!IsBlockingCollider(overlap)) continue;
+                blocked = true;
+                break;
+            }
+
+            if (blocked)
+            {
+                agent.Warp(lastSafePosition);
+                agent.ResetPath();
+                agent.velocity = Vector3.zero;
+                if (State == EnemyState.Patrol)
+                {
+                    waitUntil = -1f;
+                    PickPatrolPoint();
+                }
+                else if (State == EnemyState.Chase)
+                {
+                    SetAvoidanceDestination();
+                }
+            }
+            else
+            {
+                lastSafePosition = transform.position;
             }
         }
 
@@ -316,6 +424,7 @@ namespace FPSGame
             if (State == EnemyState.Dead || amount <= 0f) return;
 
             health -= amount;
+            if (animationBridge != null) animationBridge.PlayHit();
             if (healthBar != null) healthBar.SetValue(health / maxHealth);
 
             SetBodyColor(Color.white);
@@ -327,17 +436,31 @@ namespace FPSGame
                 return;
             }
 
-            // Getting shot alerts the enemy even if it did not see the player.
-            if (State == EnemyState.Patrol)
+            // Being attacked always alerts the enemy. Re-evaluate line of sight immediately:
+            // shoot back when the attacker is visible, otherwise chase/search the player's
+            // last known position until loseSightTime expires.
+            lastSeenTime = Time.time;
+            nextSenseTime = 0f;
+            if (player != null && playerHealth != null && playerHealth.IsAlive)
             {
-                lastSeenTime = Time.time;
-                EnterChase();
+                Sense();
+                if (canSeePlayer && AgentReady)
+                {
+                    State = EnemyState.Attack;
+                    agent.ResetPath();
+                    nextFireTime = Mathf.Min(nextFireTime, Time.time + 0.12f);
+                }
+                else
+                {
+                    EnterChase();
+                }
             }
         }
 
         private void Die()
         {
             State = EnemyState.Dead;
+            if (animationBridge != null) animationBridge.PlayDeath();
             health = 0f;
 
             if (agent.enabled)
@@ -348,6 +471,7 @@ namespace FPSGame
             if (ownCollider != null) ownCollider.enabled = false;
             if (healthBar != null) healthBar.gameObject.SetActive(false);
             if (muzzleFlash != null) muzzleFlash.SetActive(false);
+            if (shotTracer != null) shotTracer.enabled = false;
 
             hitFlashOffTime = 0f;
             SetBodyColor(new Color(0.25f, 0.25f, 0.25f, 1f));
@@ -364,6 +488,13 @@ namespace FPSGame
 
         private void UpdateDeath()
         {
+            if (animationBridge != null && animationBridge.HasDeathAnimation)
+            {
+                animationBridge.UpdateDeath(Time.deltaTime);
+                if (Time.time - deathTime > CorpseLifetime) Destroy(gameObject);
+                return;
+            }
+
             float t = Mathf.Clamp01((Time.time - deathTime) / DeathFallDuration);
             transform.rotation = Quaternion.Slerp(deathStartRotation, deathEndRotation, t * t);
             if (Time.time - deathTime > CorpseLifetime) Destroy(gameObject);
@@ -395,6 +526,8 @@ namespace FPSGame
             {
                 flashOffTime = 0f;
                 if (muzzleFlash != null) muzzleFlash.SetActive(false);
+                if (runtimeHeadFlash != null) runtimeHeadFlash.SetActive(false);
+                if (shotTracer != null) shotTracer.enabled = false;
             }
 
             if (hitFlashOffTime > 0f && Time.time >= hitFlashOffTime)
@@ -402,6 +535,122 @@ namespace FPSGame
                 hitFlashOffTime = 0f;
                 ClearBodyColor();
             }
+        }
+
+        private void ShowShotTracer(Vector3 start, Vector3 end)
+        {
+            if (shotTracer == null)
+            {
+                GameObject tracerObject = new GameObject("EnemyShotTracer");
+                tracerObject.transform.SetParent(transform, false);
+                shotTracer = tracerObject.AddComponent<LineRenderer>();
+                shotTracer.useWorldSpace = true;
+                shotTracer.positionCount = 2;
+                shotTracer.startWidth = 0.045f;
+                shotTracer.endWidth = 0.015f;
+                shotTracer.numCapVertices = 3;
+                shotTracer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                shotTracer.receiveShadows = false;
+                if (tracerMaterial == null)
+                {
+                    Shader shader = Shader.Find("Sprites/Default");
+                    if (shader != null) tracerMaterial = new Material(shader) { name = "Runtime_EnemyTracer" };
+                }
+                if (tracerMaterial != null) shotTracer.sharedMaterial = tracerMaterial;
+            }
+
+            Color color = isBoss ? new Color(1f, 0.12f, 0.04f, 1f) : new Color(1f, 0.35f, 0.08f, 1f);
+            shotTracer.startColor = color;
+            shotTracer.endColor = new Color(color.r, color.g, color.b, 0.15f);
+            shotTracer.SetPosition(0, start);
+            shotTracer.SetPosition(1, end);
+            shotTracer.enabled = true;
+            flashOffTime = Mathf.Max(flashOffTime, Time.time + 0.09f);
+        }
+
+        private void ShowHeadMuzzleFlash(Vector3 position)
+        {
+            if (runtimeHeadFlash == null)
+            {
+                runtimeHeadFlash = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                runtimeHeadFlash.name = "EnemyHeadMuzzleFlash";
+                runtimeHeadFlash.transform.SetParent(transform, true);
+                Collider flashCollider = runtimeHeadFlash.GetComponent<Collider>();
+                if (flashCollider != null) Destroy(flashCollider);
+                Renderer flashRenderer = runtimeHeadFlash.GetComponent<Renderer>();
+                Shader shader = Shader.Find("Sprites/Default");
+                if (flashRenderer != null && shader != null)
+                {
+                    Material material = new Material(shader) { name = "Runtime_EnemyHeadFlash" };
+                    material.color = isBoss
+                        ? new Color(1f, 0.08f, 0.02f, 1f)
+                        : new Color(1f, 0.48f, 0.04f, 1f);
+                    flashRenderer.sharedMaterial = material;
+                    flashRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    flashRenderer.receiveShadows = false;
+                }
+            }
+
+            runtimeHeadFlash.transform.position = position;
+            runtimeHeadFlash.transform.localScale = Vector3.one * (isBoss ? 0.3f : 0.2f);
+            runtimeHeadFlash.SetActive(true);
+            flashOffTime = Mathf.Max(flashOffTime, Time.time + 0.09f);
+        }
+
+        private bool HasClearPhysicalRoute(Vector3 destination)
+        {
+            Vector3 delta = destination - transform.position;
+            delta.y = 0f;
+            float distance = delta.magnitude;
+            if (distance < 0.25f) return true;
+
+            float radius = Mathf.Max(0.18f, agent.radius * 0.65f);
+            Vector3 origin = transform.position + Vector3.up * Mathf.Max(radius + 0.25f, agent.height * 0.45f);
+            RaycastHit[] hits = Physics.SphereCastAll(origin, radius, delta / distance, distance,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            foreach (RaycastHit hit in hits)
+            {
+                if (IsBlockingCollider(hit.collider)) return false;
+            }
+            return true;
+        }
+
+        private bool IsBlockingCollider(Collider candidate)
+        {
+            if (candidate == null || candidate == ownCollider || candidate.transform.IsChildOf(transform)) return false;
+            if (player != null && (candidate.transform == player || candidate.transform.IsChildOf(player))) return false;
+            if (candidate.GetComponentInParent<Enemy>() != null) return false;
+            if (candidate.name == "NavigationFloor") return false;
+            return true;
+        }
+
+        private void SetAvoidanceDestination()
+        {
+            Vector3 forward = player != null ? player.position - transform.position : transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.01f) forward = transform.forward;
+            forward.Normalize();
+            Vector3 side = Vector3.Cross(Vector3.up, forward) * (Random.value < 0.5f ? -1f : 1f);
+
+            for (int attempt = 0; attempt < 6; attempt++)
+            {
+                float sideDistance = agent.radius * (4f + attempt) + 1.25f;
+                Vector3 candidate = transform.position + side * sideDistance - forward * (0.5f + attempt * 0.2f);
+                if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 2.5f, NavMesh.AllAreas) &&
+                    HasClearPhysicalRoute(hit.position) && agent.CalculatePath(hit.position, path) &&
+                    path.status == NavMeshPathStatus.PathComplete)
+                {
+                    agent.SetPath(path);
+                    avoidUntil = Time.time + 0.9f;
+                    nextRepathTime = avoidUntil;
+                    return;
+                }
+                side = -side;
+            }
+
+            transform.Rotate(0f, 150f, 0f);
+            avoidUntil = Time.time + 0.35f;
+            nextRepathTime = avoidUntil;
         }
 
         private void SetBodyColor(Color color)

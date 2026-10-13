@@ -4,8 +4,8 @@ namespace FPSGame
 {
     /// <summary>
     /// Data for the three levels, written as C# so nothing has to be set up in the Editor.
-    /// Level 1: 5 enemies, small map. Level 2: 10 enemies with obstacles.
-    /// Level 3: 15 enemies plus a boss.
+    /// Level 1: 5 enemies, small map. Level 2: 7 enemies with obstacles.
+    /// Level 3: 7 enemies plus a boss in a double-sized arena.
     /// </summary>
     public static class LevelDatabase
     {
@@ -25,7 +25,9 @@ namespace FPSGame
         private static LevelDefinition CreateLevel1()
         {
             var level = new LevelDefinition("Training Yard", 30f, 30f, 90f);
-            level.SetPlayerSpawn(0f, -12f, 0f);
+            // Arena 1 has a raised, solid central combat plate. Spawn on that plate instead
+            // of the decorative lower ring that appears open from the first-person camera.
+            level.SetPlayerSpawn(0f, 0f, 0f);
             level.AddPerimeter(3f);
 
             level.AddObstacle(-5f, 0f, 2f, 2f, 2f);
@@ -74,9 +76,6 @@ namespace FPSGame
             level.AddEnemy(5f, 18f);
             level.AddEnemy(20f, 0f);
             level.AddEnemy(15f, -10f);
-            level.AddEnemy(20f, 10f);
-            level.AddEnemy(0f, 20f);
-            level.AddEnemy(-15f, -5f);
             return level;
         }
 
@@ -120,16 +119,8 @@ namespace FPSGame
             level.AddEnemy(-15f, -5f);
             level.AddEnemy(15f, -5f);
             level.AddEnemy(0f, -10f);
-            level.AddEnemy(-20f, -20f);
-            level.AddEnemy(20f, -20f);
             level.AddEnemy(-30f, 10f);
             level.AddEnemy(30f, 10f);
-            level.AddEnemy(-20f, 20f);
-            level.AddEnemy(20f, 20f);
-            level.AddEnemy(-28f, 32f);
-            level.AddEnemy(28f, 32f);
-            level.AddEnemy(-6f, 15f);
-            level.AddEnemy(6f, 15f);
             level.AddEnemy(0f, 20f, EnemyKind.Boss);
             return level;
         }

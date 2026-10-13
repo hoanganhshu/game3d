@@ -31,3 +31,11 @@
 *.log
 sysinfo.txt
 crashlytics-build.properties
+
+# Local Unity recovery and verification artifacts
+/Assets/_Recovery/
+/Assets/_Recovery.meta
+/Assets/Screenshots/
+/Assets/Screenshots.meta
+/output/
+/tmp/

@@ -17,7 +17,9 @@ namespace FPSGame
         private static void Initialize()
         {
             Changed = null;
-            TouchMode = Application.isMobilePlatform;
+            // Keep the mobile layout available in the Editor as well so the game can be
+            // tested with mouse-as-touch without producing a separate UI-only build.
+            TouchMode = Application.isMobilePlatform || Application.isEditor;
         }
 
         public static void SetTouchMode(bool enabled)

@@ -39,6 +39,7 @@ namespace FPSGame
 
         private void Awake()
         {
+            StylePauseMenu();
             AddListener(resumeButton, OnResume);
             AddListener(restartButton, OnRestart);
             AddListener(pauseSettingsButton, OnOpenSettings);
@@ -52,6 +53,62 @@ namespace FPSGame
             SetActive(winPanel, false);
             SetActive(losePanel, false);
             if (settingsPanel != null) settingsPanel.gameObject.SetActive(false);
+        }
+
+        private void StylePauseMenu()
+        {
+            if (pausePanel == null) return;
+            Transform box = pausePanel.transform.Find("Box");
+            if (box == null) return;
+
+            Image panel = box.GetComponent<Image>();
+            if (panel != null) panel.color = new Color(0.025f, 0.035f, 0.055f, 0.98f);
+            Outline frame = box.GetComponent<Outline>();
+            if (frame == null) frame = box.gameObject.AddComponent<Outline>();
+            frame.effectColor = new Color(0.08f, 0.82f, 1f, 0.9f);
+            frame.effectDistance = new Vector2(3f, -3f);
+
+            Text title = box.Find("Title") != null ? box.Find("Title").GetComponent<Text>() : null;
+            if (title != null)
+            {
+                title.text = "GAME PAUSED";
+                title.color = new Color(0.25f, 0.9f, 1f, 1f);
+            }
+
+            AddAccent(box, "TopAccent", new Vector2(0f, 345f), new Vector2(560f, 8f), new Color(0.1f, 0.8f, 1f, 1f));
+            AddAccent(box, "BottomAccent", new Vector2(0f, -345f), new Vector2(560f, 3f), new Color(0.1f, 0.8f, 1f, 0.45f));
+            StyleButton(resumeButton, new Color(0.06f, 0.65f, 0.78f, 1f));
+            StyleButton(restartButton, new Color(0.12f, 0.2f, 0.3f, 1f));
+            StyleButton(pauseSettingsButton, new Color(0.12f, 0.2f, 0.3f, 1f));
+            StyleButton(pauseMenuButton, new Color(0.5f, 0.1f, 0.14f, 1f));
+        }
+
+        private static void StyleButton(Button button, Color color)
+        {
+            if (button == null) return;
+            Image image = button.GetComponent<Image>();
+            if (image != null) image.color = color;
+            Outline outline = button.GetComponent<Outline>();
+            if (outline == null) outline = button.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.25f, 0.85f, 1f, 0.65f);
+            outline.effectDistance = new Vector2(2f, -2f);
+            ColorBlock colors = button.colors;
+            colors.highlightedColor = new Color(1.18f, 1.18f, 1.18f, 1f);
+            colors.pressedColor = new Color(0.7f, 0.85f, 0.9f, 1f);
+            colors.fadeDuration = 0.12f;
+            button.colors = colors;
+        }
+
+        private static void AddAccent(Transform parent, string name, Vector2 position, Vector2 size, Color color)
+        {
+            if (parent.Find(name) != null) return;
+            GameObject go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            RectTransform rect = go.GetComponent<RectTransform>();
+            rect.SetParent(parent, false);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            go.GetComponent<Image>().color = color;
         }
 
         private void OnEnable()

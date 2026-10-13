@@ -15,7 +15,9 @@ namespace FPSGame
         Pickup,
         Click,
         Win,
-        Lose
+        Lose,
+        Footstep,
+        EnemyGrowl
     }
 
     /// <summary>
@@ -34,6 +36,7 @@ namespace FPSGame
 
         private AudioClip[] clips;
         private AudioSource[] sources;
+        private AudioSource footstepsSource;
         private int nextSource;
         private System.Random noiseRandom;
 
@@ -55,6 +58,7 @@ namespace FPSGame
             noiseRandom = new System.Random(1337);
             CreateSources();
             GenerateClips();
+            ConfigureFootsteps();
         }
 
         private void OnDestroy()
@@ -70,6 +74,22 @@ namespace FPSGame
         public static void PlaySoundAt(SoundType type, Vector3 position, float volume = 1f)
         {
             if (Instance != null) Instance.Play(type, volume, true, position);
+        }
+
+        public static void SetFootsteps(bool moving, float runAmount)
+        {
+            if (Instance == null || Instance.footstepsSource == null) return;
+            AudioSource source = Instance.footstepsSource;
+            if (!moving)
+            {
+                if (source.isPlaying) source.Pause();
+                return;
+            }
+
+            source.pitch = Mathf.Lerp(0.92f, 1.28f, Mathf.Clamp01(runAmount));
+            source.volume = Mathf.Lerp(0.72f, 0.92f, Mathf.Clamp01(runAmount));
+            if (!source.isPlaying) source.UnPause();
+            if (!source.isPlaying) source.Play();
         }
 
         private void Play(SoundType type, float volume, bool spatial, Vector3 position)
@@ -106,6 +126,17 @@ namespace FPSGame
                 source.dopplerLevel = 0f;
                 sources[i] = source;
             }
+        }
+
+        private void ConfigureFootsteps()
+        {
+            GameObject go = new GameObject("FootstepsLoop");
+            go.transform.SetParent(transform, false);
+            footstepsSource = go.AddComponent<AudioSource>();
+            footstepsSource.playOnAwake = false;
+            footstepsSource.loop = true;
+            footstepsSource.spatialBlend = 0f;
+            footstepsSource.clip = clips[(int)SoundType.Footstep];
         }
 
         // ---------------- Procedural synthesis ----------------
@@ -149,6 +180,18 @@ namespace FPSGame
 
             clips[(int)SoundType.Lose] = CreateClip("Lose", 0.9f,
                 t => Arpeggio(t, 0.25f, 392f, 329.63f, 261.63f, 196f));
+
+            clips[(int)SoundType.Footstep] = Resources.Load<AudioClip>("Audio/FootstepsWalkingBoots");
+            if (clips[(int)SoundType.Footstep] == null)
+            {
+                clips[(int)SoundType.Footstep] = CreateClip("FootstepFallback", 0.16f,
+                    t => Noise() * Decay(t, 20f) * 0.52f + Sine(t, 68f) * Decay(t, 15f) * 0.62f);
+            }
+
+            clips[(int)SoundType.EnemyGrowl] = CreateClip("EnemyGrowl", 1.15f,
+                t => (Sine(t, 52f + Mathf.Sin(t * 7f) * 7f) * 0.52f +
+                      Square(t, 26f) * 0.12f + Noise() * 0.13f) *
+                     Mathf.Sin(Mathf.Clamp01(t / 0.09f) * Mathf.PI * 0.5f) * Decay(t, 0.75f));
         }
 
         private AudioClip CreateClip(string clipName, float duration, System.Func<float, float> sampler)

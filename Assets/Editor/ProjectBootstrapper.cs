@@ -478,10 +478,27 @@ namespace FPSGame.Editor
 
             GameObject body = CreatePart(PrimitiveType.Capsule, "Body", root.transform, new Vector3(0f, 1f, 0f),
                 new Vector3(0.9f, 1f, 0.9f), boss ? bossMaterial : enemyMaterial, false);
-            CreatePart(PrimitiveType.Cube, "Visor", root.transform, new Vector3(0f, 1.55f, 0.36f),
+            GameObject visor = CreatePart(PrimitiveType.Cube, "Visor", root.transform, new Vector3(0f, 1.55f, 0.36f),
                 new Vector3(0.6f, 0.14f, 0.2f), visorMaterial, true);
-            CreatePart(PrimitiveType.Cube, "Gun", root.transform, new Vector3(0.38f, 1.15f, 0.38f),
+            GameObject gun = CreatePart(PrimitiveType.Cube, "Gun", root.transform, new Vector3(0.38f, 1.15f, 0.38f),
                 new Vector3(0.1f, 0.12f, 0.6f), weaponDarkMaterial, false);
+
+            // Prefer the polished Meshy character when it has been imported. The primitive body
+            // remains a safe fallback so project generation never depends on an external asset.
+            const string meshyVisualPath = "Assets/Art/Characters/EnemyGrunt/Generated/EnemyGruntVisual.prefab";
+            GameObject meshyVisual = AssetDatabase.LoadAssetAtPath<GameObject>(meshyVisualPath);
+            if (meshyVisual != null)
+            {
+                GameObject visualInstance = (GameObject)PrefabUtility.InstantiatePrefab(meshyVisual);
+                visualInstance.name = "EnemyGruntVisual";
+                visualInstance.transform.SetParent(root.transform, false);
+                visualInstance.transform.localPosition = Vector3.zero;
+                visualInstance.transform.localRotation = Quaternion.identity;
+                visualInstance.transform.localScale = Vector3.one;
+                body.SetActive(false);
+                visor.SetActive(false);
+                gun.SetActive(false);
+            }
 
             Transform gunPoint = new GameObject("GunPoint").transform;
             gunPoint.SetParent(root.transform, false);
@@ -509,6 +526,9 @@ namespace FPSGame.Editor
             SetRef(enemy, "muzzleFlash", flash);
             SetRef(enemy, "healthBar", healthBar);
             SetRef(enemy, "bodyRenderer", body.GetComponent<MeshRenderer>());
+
+            EnemyAnimatorBridge bridge = root.GetComponentInChildren<EnemyAnimatorBridge>();
+            if (bridge != null) SetRef(enemy, "animationBridge", bridge);
 
             SetBool(enemy, "isBoss", boss);
             if (boss)

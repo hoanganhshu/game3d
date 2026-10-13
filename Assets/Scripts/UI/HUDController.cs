@@ -10,7 +10,8 @@ namespace FPSGame
     /// </summary>
     public class HUDController : MonoBehaviour
     {
-        private static readonly Color HealthyColor = new Color(0.3f, 0.85f, 0.35f, 1f);
+        private static readonly Color HealthyColor = new Color(0.12f, 0.9f, 0.42f, 1f);
+        private static readonly Color MidHealthColor = new Color(1f, 0.72f, 0.12f, 1f);
         private static readonly Color LowHealthColor = new Color(0.95f, 0.25f, 0.2f, 1f);
         private static readonly Color AmmoColor = Color.white;
         private static readonly Color EmptyAmmoColor = new Color(1f, 0.3f, 0.25f, 1f);
@@ -29,6 +30,7 @@ namespace FPSGame
         [SerializeField] private Button pauseButton;
 
         private Image healthFillImage;
+        private Outline healthFillGlow;
         private float damageAlpha;
         private float hitAlpha;
         private int lastShownSecond = -1;
@@ -37,6 +39,29 @@ namespace FPSGame
         private void Awake()
         {
             if (healthFill != null) healthFillImage = healthFill.GetComponent<Image>();
+            if (healthFill != null && healthFill.parent != null)
+            {
+                Image background = healthFill.parent.GetComponent<Image>();
+                if (background != null) background.color = new Color(0.018f, 0.025f, 0.04f, 0.98f);
+                Outline outline = healthFill.parent.GetComponent<Outline>();
+                if (outline == null) outline = healthFill.parent.gameObject.AddComponent<Outline>();
+                outline.effectColor = new Color(0.18f, 0.75f, 1f, 0.9f);
+                outline.effectDistance = new Vector2(2f, -2f);
+                BuildHealthBarDetails(healthFill.parent as RectTransform);
+            }
+            if (healthFillImage != null)
+            {
+                healthFillGlow = healthFill.GetComponent<Outline>();
+                if (healthFillGlow == null) healthFillGlow = healthFill.gameObject.AddComponent<Outline>();
+                healthFillGlow.effectDistance = new Vector2(2f, -2f);
+            }
+            if (healthText != null)
+            {
+                Shadow shadow = healthText.GetComponent<Shadow>();
+                if (shadow == null) shadow = healthText.gameObject.AddComponent<Shadow>();
+                shadow.effectColor = new Color(0f, 0f, 0f, 0.95f);
+                shadow.effectDistance = new Vector2(2f, -2f);
+            }
             if (damageFlash != null)
             {
                 damageBaseColor = damageFlash.color;
@@ -107,8 +132,49 @@ namespace FPSGame
         {
             float normalized = max > 0f ? Mathf.Clamp01(current / max) : 0f;
             if (healthFill != null) healthFill.anchorMax = new Vector2(normalized, 1f);
-            if (healthFillImage != null) healthFillImage.color = normalized > 0.3f ? HealthyColor : LowHealthColor;
+            if (healthFillImage != null)
+            {
+                healthFillImage.color = normalized > 0.5f
+                    ? Color.Lerp(MidHealthColor, HealthyColor, (normalized - 0.5f) * 2f)
+                    : Color.Lerp(LowHealthColor, MidHealthColor, normalized * 2f);
+            }
             if (healthText != null) healthText.text = NumberStrings.Get(Mathf.CeilToInt(current));
+            if (healthFillGlow != null)
+            {
+                Color glow = healthFillImage != null ? healthFillImage.color : HealthyColor;
+                glow.a = 0.65f;
+                healthFillGlow.effectColor = glow;
+            }
+        }
+
+        private void BuildHealthBarDetails(RectTransform track)
+        {
+            if (track == null || track.Find("HUDHighlight") != null) return;
+
+            GameObject highlightObject = new GameObject("HUDHighlight", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            RectTransform highlight = highlightObject.GetComponent<RectTransform>();
+            highlight.SetParent(healthFill, false);
+            highlight.anchorMin = new Vector2(0f, 0.58f);
+            highlight.anchorMax = Vector2.one;
+            highlight.offsetMin = new Vector2(2f, 0f);
+            highlight.offsetMax = new Vector2(-2f, -2f);
+            Image highlightImage = highlightObject.GetComponent<Image>();
+            highlightImage.color = new Color(1f, 1f, 1f, 0.2f);
+            highlightImage.raycastTarget = false;
+
+            for (int i = 1; i < 5; i++)
+            {
+                GameObject tickObject = new GameObject("HealthTick" + i, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                RectTransform tick = tickObject.GetComponent<RectTransform>();
+                tick.SetParent(track, false);
+                float x = i / 5f;
+                tick.anchorMin = new Vector2(x, 0.12f);
+                tick.anchorMax = new Vector2(x, 0.88f);
+                tick.sizeDelta = new Vector2(2f, 0f);
+                Image tickImage = tickObject.GetComponent<Image>();
+                tickImage.color = new Color(0f, 0f, 0f, 0.38f);
+                tickImage.raycastTarget = false;
+            }
         }
 
         private void OnPlayerDamaged()

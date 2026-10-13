@@ -25,6 +25,13 @@ namespace FPSGame
 
         public bool IsHeld => activePointer != NoPointer;
 
+        public void ConfigureColors(Color normal, Color pressed)
+        {
+            normalColor = normal;
+            pressedColor = pressed;
+            ApplyColor(IsHeld);
+        }
+
         private void OnEnable()
         {
             ApplyColor(false);
