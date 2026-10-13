@@ -39,6 +39,7 @@ namespace FPSGame
         private void Awake()
         {
             if (healthFill != null) healthFillImage = healthFill.GetComponent<Image>();
+            if (healthFillImage != null) ArenaUITheme.StyleProgressBar(healthFillImage);
             if (healthFill != null && healthFill.parent != null)
             {
                 Image background = healthFill.parent.GetComponent<Image>();
@@ -134,14 +135,12 @@ namespace FPSGame
             if (healthFill != null) healthFill.anchorMax = new Vector2(normalized, 1f);
             if (healthFillImage != null)
             {
-                healthFillImage.color = normalized > 0.5f
-                    ? Color.Lerp(MidHealthColor, HealthyColor, (normalized - 0.5f) * 2f)
-                    : Color.Lerp(LowHealthColor, MidHealthColor, normalized * 2f);
+                healthFillImage.color = Color.white;
             }
             if (healthText != null) healthText.text = NumberStrings.Get(Mathf.CeilToInt(current));
             if (healthFillGlow != null)
             {
-                Color glow = healthFillImage != null ? healthFillImage.color : HealthyColor;
+                Color glow = normalized < 0.3f ? LowHealthColor : new Color(1f, 0.3f, 0.3f, 1f);
                 glow.a = 0.65f;
                 healthFillGlow.effectColor = glow;
             }

@@ -1121,13 +1121,13 @@ namespace FPSGame.Editor
 
             // Action buttons (bottom-right)
             Vector2 bottomRight = new Vector2(1f, 0f);
-            TouchButton fire = CreateTouchButton("FireButton", root, "FIRE", 44, bottomRight, new Vector2(-260f, 260f), 240f,
+            TouchButton fire = CreateTouchButton("FireButton", root, "FIRE", 44, bottomRight, new Vector2(-245f, 245f), 205f,
                 new Color(1f, 0.3f, 0.25f, 0.4f), true);
-            TouchButton reload = CreateTouchButton("ReloadButton", root, "RELOAD", 28, bottomRight, new Vector2(-480f, 150f), 150f,
+            TouchButton reload = CreateTouchButton("ReloadButton", root, "RELOAD", 28, bottomRight, new Vector2(-445f, 165f), 132f,
                 new Color(1f, 1f, 1f, 0.28f), false);
-            TouchButton jump = CreateTouchButton("JumpButton", root, "JUMP", 30, bottomRight, new Vector2(-120f, 500f), 150f,
+            TouchButton jump = CreateTouchButton("JumpButton", root, "JUMP", 30, bottomRight, new Vector2(-135f, 440f), 132f,
                 new Color(1f, 1f, 1f, 0.28f), false);
-            TouchButton swap = CreateTouchButton("SwitchButton", root, "SWAP", 30, bottomRight, new Vector2(-470f, 390f), 150f,
+            TouchButton swap = CreateTouchButton("SwitchButton", root, "SWAP", 30, bottomRight, new Vector2(-425f, 405f), 132f,
                 new Color(1f, 1f, 1f, 0.28f), false);
 
             SetRef(controls, "controlsRoot", root.gameObject);

@@ -40,6 +40,8 @@ namespace FPSGame
         private void Awake()
         {
             StylePauseMenu();
+            ArenaUITheme.StylePanel(winPanel);
+            ArenaUITheme.StylePanel(losePanel);
             AddListener(resumeButton, OnResume);
             AddListener(restartButton, OnRestart);
             AddListener(pauseSettingsButton, OnOpenSettings);
@@ -58,29 +60,30 @@ namespace FPSGame
         private void StylePauseMenu()
         {
             if (pausePanel == null) return;
+            ArenaUITheme.StylePanel(pausePanel);
             Transform box = pausePanel.transform.Find("Box");
             if (box == null) return;
 
             Image panel = box.GetComponent<Image>();
-            if (panel != null) panel.color = new Color(0.025f, 0.035f, 0.055f, 0.98f);
+            if (panel != null) panel.color = ArenaUITheme.Panel;
             Outline frame = box.GetComponent<Outline>();
             if (frame == null) frame = box.gameObject.AddComponent<Outline>();
-            frame.effectColor = new Color(0.08f, 0.82f, 1f, 0.9f);
+            frame.effectColor = ArenaUITheme.Silver;
             frame.effectDistance = new Vector2(3f, -3f);
 
             Text title = box.Find("Title") != null ? box.Find("Title").GetComponent<Text>() : null;
             if (title != null)
             {
-                title.text = "GAME PAUSED";
-                title.color = new Color(0.25f, 0.9f, 1f, 1f);
+                title.text = "PAUSED";
+                title.color = Color.white;
             }
 
-            AddAccent(box, "TopAccent", new Vector2(0f, 345f), new Vector2(560f, 8f), new Color(0.1f, 0.8f, 1f, 1f));
-            AddAccent(box, "BottomAccent", new Vector2(0f, -345f), new Vector2(560f, 3f), new Color(0.1f, 0.8f, 1f, 0.45f));
-            StyleButton(resumeButton, new Color(0.06f, 0.65f, 0.78f, 1f));
-            StyleButton(restartButton, new Color(0.12f, 0.2f, 0.3f, 1f));
-            StyleButton(pauseSettingsButton, new Color(0.12f, 0.2f, 0.3f, 1f));
-            StyleButton(pauseMenuButton, new Color(0.5f, 0.1f, 0.14f, 1f));
+            AddAccent(box, "TopAccent", new Vector2(0f, 345f), new Vector2(560f, 6f), ArenaUITheme.RedGlow);
+            AddAccent(box, "BottomAccent", new Vector2(0f, -345f), new Vector2(560f, 2f), ArenaUITheme.Silver);
+            ArenaUITheme.StyleButton(resumeButton, true);
+            ArenaUITheme.StyleButton(restartButton);
+            ArenaUITheme.StyleButton(pauseSettingsButton);
+            ArenaUITheme.StyleButton(pauseMenuButton, false, true);
         }
 
         private static void StyleButton(Button button, Color color)

@@ -34,17 +34,18 @@ namespace FPSGame
 
         private void StyleScreen()
         {
+            ArenaUITheme.StyleRoot(transform);
+            ArenaUITheme.StyleSceneBackground(transform);
             Image background = transform.Find("Background") != null ? transform.Find("Background").GetComponent<Image>() : null;
-            if (background != null) background.color = new Color(0.015f, 0.025f, 0.045f, 1f);
 
             Text title = GetComponentInChildren<Text>(true);
             if (title != null && title.name == "Title")
             {
-                title.text = "CHOOSE YOUR ARENA";
-                title.color = new Color(0.2f, 0.88f, 1f, 1f);
+                title.text = "SELECT ARENA";
+                title.color = Color.white;
                 Outline titleOutline = title.GetComponent<Outline>();
                 if (titleOutline == null) titleOutline = title.gameObject.AddComponent<Outline>();
-                titleOutline.effectColor = new Color(0f, 0.35f, 0.5f, 0.8f);
+                titleOutline.effectColor = new Color(0f, 0f, 0f, 0.9f);
                 titleOutline.effectDistance = new Vector2(3f, -3f);
             }
 
@@ -52,11 +53,12 @@ namespace FPSGame
             {
                 Button card = levelButtons[i];
                 if (card == null) continue;
+                AddArenaPreview(card, i);
                 Image image = card.GetComponent<Image>();
-                if (image != null) image.color = new Color(0.035f, 0.055f, 0.085f, 0.98f);
+                if (image != null) image.color = ArenaUITheme.Gunmetal;
                 Outline border = card.GetComponent<Outline>();
                 if (border == null) border = card.gameObject.AddComponent<Outline>();
-                border.effectColor = new Color(0.08f, 0.65f, 0.82f, 0.85f);
+                border.effectColor = ArenaUITheme.Silver;
                 border.effectDistance = new Vector2(3f, -3f);
 
                 ColorBlock colors = card.colors;
@@ -77,19 +79,78 @@ namespace FPSGame
                     rect.pivot = new Vector2(0.5f, 1f);
                     rect.anchoredPosition = new Vector2(0f, -8f);
                     rect.sizeDelta = new Vector2(0f, 8f);
-                    go.GetComponent<Image>().color = new Color(0.1f, 0.85f, 1f, 1f);
+                    go.GetComponent<Image>().color = ArenaUITheme.RedGlow;
                 }
             }
 
             if (backButton != null)
             {
                 Image image = backButton.GetComponent<Image>();
-                if (image != null) image.color = new Color(0.08f, 0.14f, 0.22f, 1f);
+                if (image != null) image.color = ArenaUITheme.Gunmetal;
                 Outline outline = backButton.GetComponent<Outline>();
                 if (outline == null) outline = backButton.gameObject.AddComponent<Outline>();
-                outline.effectColor = new Color(0.1f, 0.75f, 0.95f, 0.8f);
+                outline.effectColor = ArenaUITheme.Silver;
                 outline.effectDistance = new Vector2(2f, -2f);
             }
+        }
+
+        private static void AddArenaPreview(Button card, int index)
+        {
+            Sprite previewSprite = Resources.Load<Sprite>("UI/ArenaThumb" + (index + 1));
+            if (previewSprite == null) return;
+
+            Transform existing = card.transform.Find("ArenaPreview");
+            Image preview;
+            if (existing != null)
+            {
+                preview = existing.GetComponent<Image>();
+            }
+            else
+            {
+                GameObject go = new GameObject("ArenaPreview", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                go.transform.SetParent(card.transform, false);
+                preview = go.GetComponent<Image>();
+            }
+
+            preview.sprite = previewSprite;
+            preview.preserveAspect = false;
+            preview.color = Color.white;
+            preview.raycastTarget = false;
+            RectTransform previewRect = preview.rectTransform;
+            previewRect.anchorMin = previewRect.anchorMax = new Vector2(0.5f, 1f);
+            previewRect.pivot = new Vector2(0.5f, 1f);
+            previewRect.anchoredPosition = new Vector2(0f, -14f);
+            previewRect.sizeDelta = new Vector2(430f, 250f);
+            preview.transform.SetAsFirstSibling();
+
+            Reposition(card.transform.Find("Label"), new Vector2(0f, -278f), new Vector2(440f, 64f));
+            Reposition(card.transform.Find("Name"), new Vector2(0f, -342f), new Vector2(440f, 44f));
+            Transform enemies = card.transform.Find("Enemies");
+            if (enemies != null) enemies.gameObject.SetActive(false);
+            for (int star = 1; star <= 3; star++)
+            {
+                Transform starTransform = card.transform.Find("Star" + star);
+                if (starTransform is RectTransform starRect)
+                {
+                    starRect.anchoredPosition = new Vector2((star - 2) * 92f, -160f);
+                    starRect.sizeDelta = new Vector2(68f, 68f);
+                }
+            }
+            Transform info = card.transform.Find("Info");
+            if (info is RectTransform infoRect)
+            {
+                infoRect.anchorMin = infoRect.anchorMax = infoRect.pivot = new Vector2(0.5f, 0f);
+                infoRect.anchoredPosition = new Vector2(0f, 24f);
+                infoRect.sizeDelta = new Vector2(440f, 50f);
+            }
+        }
+
+        private static void Reposition(Transform target, Vector2 positionFromTop, Vector2 size)
+        {
+            if (!(target is RectTransform rect)) return;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = positionFromTop;
+            rect.sizeDelta = size;
         }
 
         private void Start()

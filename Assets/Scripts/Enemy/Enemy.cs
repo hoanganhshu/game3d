@@ -199,36 +199,7 @@ namespace FPSGame
 
             Vector3 eyePosition = eye != null ? eye.position : transform.position + Vector3.up * 1.6f;
             Vector3 targetPoint = player.position + Vector3.up * 1.4f;
-            Vector3 direction = targetPoint - eyePosition;
-            float distance = direction.magnitude;
-
-            if (distance < 0.01f)
-            {
-                canSeePlayer = true;
-            }
-            else
-            {
-                RaycastHit[] hits = Physics.RaycastAll(eyePosition, direction / distance, distance + 0.5f,
-                    Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-                bool foundBlocker = false;
-                foreach (RaycastHit hit in hits)
-                {
-                    if (hit.transform == transform || hit.transform.IsChildOf(transform)) continue;
-                    if (hit.transform == player || hit.transform.IsChildOf(player))
-                    {
-                        canSeePlayer = true;
-                        break;
-                    }
-
-                    foundBlocker = true;
-                    break;
-                }
-
-                // Some player controllers do not expose a raycast collider at chest height.
-                // An empty ray therefore means a clear, unobstructed segment to the target.
-                if (!foundBlocker && !canSeePlayer) canSeePlayer = true;
-            }
+            canSeePlayer = HasUnobstructedShot(eyePosition, targetPoint);
 
             if (canSeePlayer) lastSeenTime = Time.time;
         }
@@ -353,21 +324,30 @@ namespace FPSGame
 
         private void Shoot(float distance)
         {
+            // Fire from the face-mounted cannon socket. The eye transform sits above the
+            // imported Meshy monster's face, which made tracers appear over its head.
+            Vector3 soundPosition = gunPoint != null
+                ? gunPoint.position
+                : eye != null
+                    ? eye.position - transform.up * 0.35f + transform.forward * 0.28f
+                    : transform.position + transform.up * 1.25f + transform.forward * 0.65f;
+            Vector3 targetPoint = player.position + Vector3.up * 0.85f;
+            // Revalidate immediately before firing. Sense() runs at intervals, so relying on
+            // its cached result could allow a shot just after the player moved behind cover.
+            if (!HasUnobstructedShot(soundPosition, targetPoint))
+            {
+                EnterChase();
+                return;
+            }
+
             if (animationBridge != null) animationBridge.PlayAttack();
             if (muzzleFlash != null)
             {
                 muzzleFlash.SetActive(true);
                 flashOffTime = Time.time + 0.06f;
             }
-
-            // Imported Meshy weapon sockets are inconsistent between models. Start the shot
-            // at head/eye height so the tracer visibly comes from the monster toward the player.
-            Vector3 soundPosition = eye != null
-                ? eye.position + transform.forward * 0.28f
-                : transform.position + Vector3.up * 1.45f + transform.forward * 0.28f;
             ShowHeadMuzzleFlash(soundPosition);
             AudioManager.PlaySoundAt(SoundType.EnemyShot, soundPosition, 0.8f);
-            Vector3 targetPoint = player.position + Vector3.up * 0.85f;
             ShowShotTracer(soundPosition, targetPoint);
 
             float distance01 = Mathf.Clamp01(distance / Mathf.Max(1f, attackRange));
@@ -376,6 +356,30 @@ namespace FPSGame
             {
                 playerHealth.TakeDamage(damage, player.position, -transform.forward);
             }
+        }
+
+        private bool HasUnobstructedShot(Vector3 shotOrigin, Vector3 targetPoint)
+        {
+            Vector3 reverse = shotOrigin - targetPoint;
+            float distance = reverse.magnitude;
+            if (distance < 0.01f) return true;
+
+            // Cast from the player back toward the enemy. This direction is deliberate: when
+            // an enemy is accidentally inside a concave MeshCollider, a ray starting inside
+            // it may miss the wall, while the reverse ray must cross the wall's front face.
+            RaycastHit[] hits = Physics.RaycastAll(targetPoint, reverse / distance, distance + 0.45f,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.transform == player || hit.transform.IsChildOf(player)) continue;
+                if (hit.transform == transform || hit.transform.IsChildOf(transform)) return true;
+                if (hit.collider != null && hit.collider.name == "NavigationFloor") continue;
+                return false;
+            }
+
+            // No collider between both points means the segment is unobstructed.
+            return true;
         }
 
         private void LateUpdate()

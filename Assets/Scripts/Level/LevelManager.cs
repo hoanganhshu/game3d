@@ -227,9 +227,11 @@ namespace FPSGame
         private static Vector3 FindClearEnemySpawn(Vector3 desired)
         {
             const float capsuleRadius = 0.36f;
-            for (int ring = 0; ring <= 7; ring++)
+            // Meshy arenas can contain a large solid structure at an authored spawn. Search
+            // far enough to get completely outside it instead of falling back inside the mesh.
+            for (int ring = 0; ring <= 20; ring++)
             {
-                float radius = ring * 1.25f;
+                float radius = ring * 1.5f;
                 int samples = ring == 0 ? 1 : 16;
                 for (int i = 0; i < samples; i++)
                 {
@@ -250,8 +252,11 @@ namespace FPSGame
                 }
             }
 
-            Debug.LogWarning("[LevelManager] No clear enemy spawn was found near " + desired + ".");
-            return new Vector3(desired.x, 0.01f, desired.z);
+            Debug.LogError("[LevelManager] No clear enemy spawn was found near " + desired +
+                           "; moving it to the nearest safe NavMesh point.");
+            if (NavMesh.SamplePosition(Vector3.zero, out NavMeshHit fallback, 30f, NavMesh.AllAreas))
+                return fallback.position + Vector3.up * 0.01f;
+            return new Vector3(0f, 0.01f, 0f);
         }
 
         private void HandleEnemyKilled(Enemy enemy)

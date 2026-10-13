@@ -72,7 +72,8 @@ namespace FPSGame
             level.AddEnemy(-20f, 0f);
             level.AddEnemy(-15f, 10f);
             level.AddEnemy(-20f, 20f);
-            level.AddEnemy(0f, 5f);
+            // Keep this spawn away from the arena's solid centre structure.
+            level.AddEnemy(10f, -18f);
             level.AddEnemy(5f, 18f);
             level.AddEnemy(20f, 0f);
             level.AddEnemy(15f, -10f);

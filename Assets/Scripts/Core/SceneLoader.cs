@@ -38,6 +38,9 @@ namespace FPSGame
 
             Instance = this;
 
+            if (progressFill != null)
+                ArenaUITheme.StyleProgressBar(progressFill.GetComponent<Image>());
+
             if (percentStrings == null)
             {
                 percentStrings = new string[101];

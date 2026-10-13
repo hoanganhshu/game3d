@@ -31,7 +31,29 @@ namespace FPSGame
             InputMode.Changed += Apply;
             ResolveMissingReferences();
             ApplyProfessionalStyle();
+            ArrangeActionButtons();
             Apply(InputMode.TouchMode);
+        }
+
+        private void ArrangeActionButtons()
+        {
+            // Three equal-radius satellites around the fire button. Angles are chosen to
+            // remain inside the safe area while leaving the weapon HUD unobstructed.
+            PlaceAction(fireButton, new Vector2(-245f, 245f), 205f);
+            PlaceAction(jumpButton, new Vector2(-135f, 440f), 132f);
+            PlaceAction(switchButton, new Vector2(-425f, 405f), 132f); // reload
+            PlaceAction(reloadButton, new Vector2(-445f, 165f), 132f); // crouch
+        }
+
+        private static void PlaceAction(TouchButton button, Vector2 position, float size)
+        {
+            if (button == null) return;
+            RectTransform rect = button.transform as RectTransform;
+            if (rect == null) return;
+            rect.anchorMin = rect.anchorMax = new Vector2(1f, 0f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = new Vector2(size, size);
         }
 
         private void ResolveMissingReferences()

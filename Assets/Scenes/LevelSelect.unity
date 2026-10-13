@@ -2305,7 +2305,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: 10 ENEMIES
+  m_Text: 7 ENEMIES
 --- !u!222 &920064746
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3404,7 +3404,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: 15 ENEMIES + BOSS
+  m_Text: 7 ENEMIES + BOSS
 --- !u!222 &1904875356
 CanvasRenderer:
   m_ObjectHideFlags: 0

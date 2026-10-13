@@ -27,6 +27,7 @@ namespace FPSGame
 
         private void Awake()
         {
+            ArenaUITheme.StylePanel(gameObject);
             AddListeners();
         }
 
@@ -109,13 +110,13 @@ namespace FPSGame
             for (int i = 0; i < qualityButtons.Length; i++)
             {
                 if (qualityButtons[i] == null || qualityButtons[i].image == null) continue;
-                qualityButtons[i].image.color = i == save.Quality ? selectedColor : normalColor;
+                qualityButtons[i].image.color = i == save.Quality ? ArenaUITheme.Crimson : ArenaUITheme.Gunmetal;
             }
 
             if (fpsToggleLabel != null) fpsToggleLabel.text = save.ShowFps ? "ON" : "OFF";
             if (fpsToggleButton != null && fpsToggleButton.image != null)
             {
-                fpsToggleButton.image.color = save.ShowFps ? selectedColor : normalColor;
+                fpsToggleButton.image.color = save.ShowFps ? ArenaUITheme.Crimson : ArenaUITheme.Gunmetal;
             }
         }
 

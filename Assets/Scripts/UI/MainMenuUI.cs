@@ -23,6 +23,28 @@ namespace FPSGame
 
         private void Awake()
         {
+            ArenaUITheme.StyleRoot(transform);
+            ArenaUITheme.StyleSceneBackground(transform);
+            Transform stripe = transform.Find("AccentStripe");
+            if (stripe != null)
+            {
+                if (stripe.TryGetComponent(out Image stripeImage)) stripeImage.color = ArenaUITheme.RedGlow;
+                RectTransform stripeRect = stripe as RectTransform;
+                if (stripeRect != null)
+                {
+                    stripeRect.anchorMin = new Vector2(0.36f, stripeRect.anchorMin.y);
+                    stripeRect.anchorMax = new Vector2(0.64f, stripeRect.anchorMax.y);
+                    stripeRect.offsetMin = new Vector2(0f, stripeRect.offsetMin.y);
+                    stripeRect.offsetMax = new Vector2(0f, stripeRect.offsetMax.y);
+                }
+            }
+            Transform title = transform.Find("SafeArea/Title");
+            if (title == null) title = transform.Find("Title");
+            if (title != null && title.TryGetComponent(out Text titleText))
+            {
+                titleText.text = "MAIN MENU";
+                ArenaUITheme.StyleText(titleText);
+            }
             if (playButton != null) playButton.onClick.AddListener(OnPlay);
             if (levelSelectButton != null) levelSelectButton.onClick.AddListener(OnLevelSelect);
             if (settingsButton != null) settingsButton.onClick.AddListener(OnSettings);
