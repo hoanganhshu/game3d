@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">
+ <rect width="900" height="900" fill="#10151d"/><text x="45" y="62" fill="white" font-family="Arial" font-size="34" font-weight="bold">MAP 1 — FLOOR COLLIDER</text>
+ <text x="45" y="100" fill="#9fb3c8" font-family="Arial" font-size="21">Arena 3 mesh • đường kính hiển thị 90 m</text>
+ <rect x="90" y="140" width="720" height="720" fill="#26384a" stroke="#61c9ff" stroke-width="7" opacity=".8"/>
+ <circle cx="450" cy="500" r="328" fill="#23e5a3" fill-opacity=".12" stroke="#23e5a3" stroke-width="10"/>
+ <circle cx="450" cy="500" r="346" fill="none" stroke="#ffb84d" stroke-width="5" stroke-dasharray="15 12"/>
+ <circle cx="450" cy="500" r="14" fill="#fff"/><path d="M450 468l-18 30h36z" fill="#fff"/>
+ <text x="470" y="492" fill="white" font-family="Arial" font-size="20">Player spawn</text>
+ <text x="105" y="185" fill="#61c9ff" font-family="Arial" font-size="20">NavigationFloor 90 × 90 m</text>
+ <text x="470" y="168" fill="#23e5a3" font-family="Arial" font-size="20">Collider sát tường: r = 40.95 m</text>
+ <text x="470" y="830" fill="#ffb84d" font-family="Arial" font-size="20">Biên dự phòng: r = 43.2 m</text>
+</svg>

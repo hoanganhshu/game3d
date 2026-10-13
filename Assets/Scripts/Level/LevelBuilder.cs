@@ -138,14 +138,19 @@ namespace FPSGame
 
             // Meshy meshes include a wide decorative outer shell. Keep actors inside the
             // actual combat deck instead of letting them walk behind the visible arena wall.
-            float half = diameter * 0.24f;
+            // The normalized arena diameter describes the complete visible model, so the
+            // authored outer wall lies close to radius = diameter / 2. Keep these emergency
+            // limits just inside that wall instead of cutting the playable floor in half.
+            float half = diameter * 0.48f;
             CreateInvisibleBoundary("Boundary_North", new Vector3(0f, 2.5f, half), new Vector3(diameter, 5f, 1f));
             CreateInvisibleBoundary("Boundary_South", new Vector3(0f, 2.5f, -half), new Vector3(diameter, 5f, 1f));
             CreateInvisibleBoundary("Boundary_East", new Vector3(half, 2.5f, 0f), new Vector3(1f, 5f, diameter));
             CreateInvisibleBoundary("Boundary_West", new Vector3(-half, 2.5f, 0f), new Vector3(1f, 5f, diameter));
             // The clean central deck is the combat area. This proxy ring participates in the
             // NavMesh bake and keeps agents away from dense decorative rocks/walls.
-            CreateCircularArenaBoundary(diameter * 0.16f);
+            // This circular proxy is only an AI/player failsafe around the outer perimeter;
+            // the dense MeshCollider still provides the exact collision against visible walls.
+            CreateCircularArenaBoundary(diameter * 0.455f);
         }
 
         private void CreateCircularArenaBoundary(float radius)
@@ -208,7 +213,7 @@ namespace FPSGame
         {
             // Meshy arenas are circular. Keep gameplay objects away from the decorative
             // outer wall even though the hidden navigation floor is square.
-            float safeRadius = Mathf.Max(1f, ArenaDiameter * 0.15f - edgePadding);
+            float safeRadius = Mathf.Max(1f, ArenaDiameter * 0.44f - edgePadding);
             Vector2 flat = new Vector2(position.x, position.z);
             if (flat.sqrMagnitude > safeRadius * safeRadius)
             {

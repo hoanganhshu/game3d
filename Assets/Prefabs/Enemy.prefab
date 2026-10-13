@@ -183,7 +183,7 @@ MonoBehaviour:
   fieldOfView: 140
   loseSightTime: 5
   fireInterval: 1.2
-  damage: 3.5
+  damage: 0.875
   accuracy: 0.55
   patrolRadius: 8
   scoreValue: 100

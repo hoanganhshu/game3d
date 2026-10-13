@@ -35,7 +35,7 @@ namespace FPSGame
         [SerializeField] private float fieldOfView = 140f;
         [SerializeField] private float loseSightTime = 5f;
         [SerializeField] private float fireInterval = 1.2f;
-        [SerializeField] private float damage = 3.5f;
+        [SerializeField] private float damage = 0.875f;
         [SerializeField, Range(0f, 1f)] private float accuracy = 0.55f;
         [SerializeField] private float patrolRadius = 8f;
         [SerializeField] private int scoreValue = 100;

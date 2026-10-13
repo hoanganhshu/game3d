@@ -13,6 +13,7 @@ namespace FPSGame
         [SerializeField] private Transform cameraPivot;
         [SerializeField] private float moveSpeed = 8.25f;
         [SerializeField] private float jumpHeight = 1.2f;
+        [SerializeField, Min(1)] private int maxConsecutiveJumps = 3;
         [SerializeField] private float gravity = -22f;
         [SerializeField] private float minPitch = -80f;
         [SerializeField] private float maxPitch = 80f;
@@ -30,6 +31,7 @@ namespace FPSGame
         private float yaw;
         private float pitch;
         private float verticalVelocity;
+        private int jumpsUsed;
         private float recoilOffset;
         private bool controlsEnabled = true;
         private Vector3 spawnPosition;
@@ -121,10 +123,16 @@ namespace FPSGame
             Vector3 velocity = (transform.right * move.x + transform.forward * move.y) * currentMoveSpeed;
 
             bool grounded = controller.isGrounded;
-            if (grounded && verticalVelocity < 0f) verticalVelocity = -2f;
-            if (controlsEnabled && grounded && input.JumpPressed)
+            if (grounded && verticalVelocity < 0f)
+            {
+                verticalVelocity = -2f;
+                jumpsUsed = 0;
+            }
+
+            if (controlsEnabled && input.JumpPressed && jumpsUsed < maxConsecutiveJumps)
             {
                 verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                jumpsUsed++;
             }
             verticalVelocity += gravity * dt;
             velocity.y = verticalVelocity;
@@ -188,6 +196,7 @@ namespace FPSGame
             transform.position = position;
             controller.enabled = true;
             verticalVelocity = 0f;
+            jumpsUsed = 0;
             currentMoveSpeed = moveSpeed;
         }
     }

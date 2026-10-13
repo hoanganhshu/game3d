@@ -613,6 +613,7 @@ MonoBehaviour:
   cameraPivot: {fileID: 6857376390481155290}
   moveSpeed: 8.25
   jumpHeight: 1.2
+  maxConsecutiveJumps: 3
   gravity: -22
   minPitch: -80
   maxPitch: 80
